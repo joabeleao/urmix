@@ -1,0 +1,130 @@
+
+
+
+#--------------------------------------------------------------------------
+# APPS
+#--------------------------------------------------------------------------
+
+_software_install() {
+
+
+
+# (3) Top bar Repository
+# https://github.com/kirigayakazushin/deepin-topbar
+echo 'deb [arch=amd64] https://packages.mkacg.com panda main' >> /etc/apt/sources.list
+apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 3BBF73EE77F2FB2A
+
+# (3) Spotify Repository
+apt install dirmngr
+apt-key adv --keyserver keyserver.ubuntu.com --recv-keys EFDC8610341D9410
+
+# (3) Office tools
+apt install -y deepin-topbar
+apt install -y vim
+apt install -y unrar
+apt install -y unzip
+apt install -y p7zip
+apt install -y firefox
+apt install -y qbittorrent
+apt install -y thunderbird
+apt install -y libreoffice
+
+# (3) Cloud and storage tools
+apt install -y owncloud-client
+apt install -y samba
+
+# (3) Virtualization tools
+apt install -y virtualbox*
+apt install -y VirtualBox-devel.i686
+apt install -y VirtualBox-devel.x86_64
+apt install -y python-VirtualBox.x86_64
+apt install -y VirtualBox-guest-additions.x86_64
+apt install -y VirtualBox-kmodsrc.x86_64
+apt install -y VirtualBox-server.x86_64
+apt install -y VirtualBox-webservice.x86_64
+apt install -y akmod-VirtualBox.x86_64
+apt install -y kmod-VirtualBox.x86_64
+apt install -y fence-agents-vbox.x86_64
+apt install -y libvirt-daemon-driver-vbox.x86_64
+apt install -y RemoteBox.noarch
+apt install -y libvirt-daemon-vbox.x86_64
+
+# (3) Remote access tools
+apt install -y teamviewer
+apt install -y remmina
+apt install -y rdesktop
+
+# (3) Development tools
+apt install -y git
+apt install -y atom
+
+# (3) Kernel tools
+dnf group install -y "Development Tools"
+apt install -y automake
+apt install -y libtool
+apt install -y kernel-devel 
+apt install -y kernel-headers
+apt install -y kernel*devel kernel*headers
+apt install -y ncurses-compat-libs
+
+# (3) Utility tools
+apt install -y curl
+apt install -y wget
+apt install -y conky-manager
+apt install -y terminator
+
+# (3) Relax tools
+apt install -y spotify
+apt install -y easytag
+apt install -y telegram
+
+
+}
+
+
+
+#--------------------------------------------------------------------------
+# Display management
+#--------------------------------------------------------------------------
+
+/etc/X11/Xsession.d/ called "45custom_xrandr-settings"
+
+EXTERNAL_OUTPUT="VGA"
+INTERNAL_OUTPUT="LVDS"
+
+xrandr |grep $EXTERNAL_OUTPUT | grep " connected "
+if [ $? -eq 0 ]; then
+    xrandr --output $INTERNAL_OUTPUT --off --output $EXTERNAL_OUTPUT --auto 
+else
+    xrandr --output $INTERNAL_OUTPUT --auto --output $EXTERNAL_OUTPUT --off
+fi
+
+
+ou
+
+VGA_MONITOR_LINE=$(xrandr | grep "^VGA.*connected")
+VGA_MONITOR_LINE=${VGA_MONITOR_LINE%%ed*}
+VGA_MONITOR=${VGA_MONITOR_LINE%% *}
+VGA_MONITOR_STATUS=${VGA_MONITOR_LINE#* }
+
+LVDS_MONITOR_LINE=$(xrandr | grep "^LVDS.*connected")
+LVDS_MONITOR=${LVDS_MONITOR_LINE%% *}
+
+if [ $VGA_MONITOR_STATUS = "connect" ]; then
+    xrandr --output $LVDS_MONITOR --off --output $VGA_MONITOR --auto 
+else
+    xrandr --output $LVDS_MONITOR --auto --output $VGA_MONITOR --off
+fi
+
+
+#--------------------------------------------------------------------------
+# Display management
+#--------------------------------------------------------------------------
+
+# SCP DOWNLOAD HOME BACKUP TO HOME FOLDER 
+
+
+
+
+
+
