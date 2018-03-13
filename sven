@@ -84,7 +84,7 @@ apt install -y telegram
 
 
 #--------------------------------------------------------------------------
-# Display management
+# Phoenix Down
 #--------------------------------------------------------------------------
 
 /etc/X11/Xsession.d/ called "45custom_xrandr-settings"
