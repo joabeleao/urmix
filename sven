@@ -72,8 +72,9 @@ apt install -y curl
 apt install -y wget
 apt install -y conky-manager
 apt install -y terminator
+apt install -y awk
 
-# (3) Relax tools
+# (3) Recreation tools
 apt install -y spotify
 apt install -y easytag
 apt install -y telegram
