@@ -3,7 +3,7 @@
 #
 #  Author: Joabe Nonis Leão - joabe.leao1 at gmail.com
 #  Based on: Willy Romao G. Franca (willyr.goncalves at gmail.com)
-#  Filename: backup.sh
+#  Filename: phoenix_down.sh
 #
 #  Make backups daily, weekly and monthly of way simple and of easy customization.
 #
