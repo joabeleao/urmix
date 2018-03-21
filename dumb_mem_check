@@ -1,0 +1,23 @@
+ 1 #!/bin/bash
+  2 # If necessary
+  3 # while read line; do echo ${TIMESTYLE} ":" ${line}; done;
+  4 # No centos killall n funfa, pkill -f deve ser usado
+  5 LOG="/var/log/memmanager"
+  6 TIMESTYLE="$(date +'%Y-%m-%d %H:%M:%S')"
+  7 
+  8 while true; do
+  9 
+ 10   MEMAV=$(free | awk 'FNR == 2 {print $7}' | grep -E [[:digit:]])
+ 11 
+ 12   if [[ ${MEMAV} -lt 400000 ]]; then
+ 13 
+ 14     killall chrome
+ 15     echo "${TIMESTYLE} : There is no free memory available for continue to working."
+ 16     echo "${TIMESTYLE} : The available amount of memory is ${MEMAV}"
+ 17     echo "${TIMESTYLE} : The chrome process will now be closed" >> ${LOG} 2>&1
+ 18 
+ 19  fi
+ 20 
+ 21  sleep 3
+ 22 
+ 23 done
