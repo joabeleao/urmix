@@ -29,31 +29,51 @@ DU_OPTIONS="--max-depth=0 -c"
 # Minimum percentual for validate size of tar backup
 PERCENTUAL_MIN_SIZE="0.09"
 
+
 #
 # VERSION AND FILE CONTROL
 #
-# Directory settings
+# -------------------------------------------
+# DIRECTORY SETTINGS
+# -------------------------------------------
 BASEDIR=$(dirname $0)
 CONF="${BASEDIR}/backup.conf"
 BKPDIR="/PHOENIXDOWN"
-# Remote storage
+# -------------------------------------------
+# REMOTE STORAGE SETTINGS
+# -------------------------------------------
 SEND=0
 BKPDST="/ANOTHERMACHINE ANOTHERMACHINEIP ANOTHERMACHINEPORT ANOTHERMACHINEUSER"
-# File settings
+# -------------------------------------------
+# FILE SETTINGS
+# -------------------------------------------
 BKPFILES="/etc /home /boot/grub"
 IGNOREDFILES="/root/bkp /dev /home/*/Downloads /home/*/OwnCloud"
 SOCKET_EXCLUDE="/tmp/sockets-to-exclude"
-# Log settings
+# -------------------------------------------
+# LOG SETTINGS
+# -------------------------------------------
 LOG="/var/log/backup.log"
 TIMESTYLE="$(date +'%Y-%m-%d %H:%M:%S')"
-# Mail settings
+DEBUGLEVEL="3"
+# -------------------------------------------
+# MAIL SETTINGS
+# -------------------------------------------
+# File that will hold the alert message
 MAILFILE="/tmp/mail.txt"
-MAIL="joabe.leao1@gmail.com"
+# Your mail
+MAILFROM="joabe.leao1@gmail.com"
+# Destination mail who'll receive alerts
+MAILTO=(joabe.leao1@gmail.com mail@provider)
+# Your smtp provider
+SMTP=smtp.provedor.com.br
+# Your mail password
+PASS=suasenha
+
 
 # Check directory and files
 [[ -f ${MAILFILE} ]] && rm -f ${MAILFILE}
 [[ -d ${BKPDIR} ]] || mkdir -p ${BKPDIR}
-
 
 
 #
@@ -63,10 +83,66 @@ MAIL="joabe.leao1@gmail.com"
 # I'll use the log example from willy's; After, a function from my tag-cli
 function log_it() {
 
-  echo "${TIMESTYLE}" ${@} >> ${LOG}
+  local TYPE="$1"
+  local DETAILS="$2"
+
+  case ${TYPE} in
+    "CRITICAL") 
+      printf '%s\n' "${TIMESTYLE} ${TYPE} ${DETAILS}" >> ${LOG}
+      ;;        
+    "WARNING")
+      printf '%s\n' "${TIMESTYLE} ${TYPE} ${DETAILS}" >> ${LOG}
+      ;;
+    "INFORMATION")
+      printf '%s\n' "${TIMESTYLE} ${TYPE} ${DETAILS}" >> ${LOG}
+      ;;
+  esac
+
 
 }
 
+
+#
+# TIMESTAMPPED MAILS
+#
+# mail execution
+function mail_it() {
+  
+  # sendmail syntax: sendemail -f "SENDER" -t "RECIPIENT" -u "SUBJECT" -m "MESSAGE"  -xu "USER" -xp "PASS" -s "SMTPADDRESS:PORT" -o tls="YESorNO"
+  # Defining backup type
+  local TYPE="$1"
+  local DETAILS="$2"
+  local MSG1="[${TYPE}] [$(hostname)] The backup was completed sucessfull."
+  local MSG2="[${TYPE}] [$(hostname)] Although the backup was completed sucessfull, some errors ocourred. Please check."
+  local MSG3="[${TYPE}] [$(hostname)] The backup was not completed sucessfull, please check."
+  
+  # For each mail, 
+  # In order to put a timestamp in the beginning of each line on log, it was not possible to let the timestamp inside message variable
+  # First, the message is inserted on log, after, its details. Both with timestamp on the beginning. This is why 2 lines for each logs      
+  case ${TYPE} in
+    "CRITICAL") 
+      for m in ${MAILTO[@]}; do
+        sendmail -f "${MAILFROM}" -t "${m}" -u "PHOENIXDOWN - ${TYPE}" -m "${TIMESTYLE} ${MSG3} ${DETAILS}"  -xu "${MAILFROM}" -xp "${PASS}" -s "${SMTP}:587" -o tls="no"
+      done
+      printf '%s\n' "${TIMESTYLE} ${MSG3}" >> ${LOG}
+      printf '%s\n' "${TIMESTYLE} ${TYPE} ${DETAILS}" >> ${LOG}
+      ;;        
+    "WARNING")
+      for m in ${MAILTO[@]}; do
+        sendmail -f "${MAILFROM}" -t "${m}" -u "PHOENIXDOWN - ${TYPE}" -m "${TIMESTYLE} ${MSG2} ${DETAILS}"  -xu "${MAILFROM}" -xp "${PASS}" -s "${SMTP}:587" -o tls="no"
+      done
+      printf '%s\n' "${TIMESTYLE} ${MSG2}" >> ${LOG}
+      printf '%s\n' "${TIMESTYLE} ${TYPE} ${DETAILS}" >> ${LOG}
+      ;;
+    "INFORMATION")
+      for m in ${MAILTO[@]}; do
+        sendmail -f "${MAILFROM}" -t "${m}" -u "PHOENIXDOWN - ${TYPE}" -m "${TIMESTYLE} ${MSG1} ${DETAILS}"  -xu "${MAILFROM}" -xp "${PASS}" -s "${SMTP}:587" -o tls="no"
+      done
+      printf '%s\n' "${TIMESTYLE} [$MSG1]" >> ${LOG}
+      ;;
+  esac
+
+}
 
 
 #
@@ -76,14 +152,16 @@ function log_it() {
 function exclude_it() {
 
   # Search sockets to exclude from backup and also ignore folders in ${IGNORE}
-  ${FIND} /var/ /run/ /dev/ -type s -print > $SOCKET_EXCLUDE 2>> /dev/null
+  ${FIND} /var/ /run/ /dev/ -type s -print > $SOCKET_EXCLUDE 2> /dev/null
   IGNORE="${IGNORE}"
 
   # Exclude selected directories and files
-  for f in ${IGNORE}; do echo ${f} >> ${SOCKET_EXCLUDE}; done
+  for f in ${IGNORE}; do 
+    echo ${f} >> ${SOCKET_EXCLUDE} 
+    [[ ${DEBUGLEVEL} -eq 3 ]] && log_it "INFORMATION" "Excluded Socket: ${f}"  
+  done
   
 }
-
 
 
 #
@@ -104,24 +182,6 @@ OPTIONS:
 
 
 #
-# MAIL OPTION	
-#
-function mail_it() {
-
-  log_it "mail_it: The backup was not completed successfully, please check."
-
-  # create file to send mail
-  grep $(date +'%Y-%m-%d') ${LOG} >> ${MAILFILE}
-  echo -e "\nSent by $0 in $(date +'%Y-%m-%d %H:%M:%S')" >> ${MAILFILE}
-
-  # send mail
-  mail -s "[$(hostname)] ERROR: Backup ${MAIL} < ${MAILFILE}"
-  
-}
-
-
-
-#
 # SEND OPTION
 #
 function send_it() {
@@ -129,11 +189,14 @@ function send_it() {
   local files=("$@")
   for ((i=0; i<${#HOST_BKP[@]}; i++)); do
     ${RSYNC} ${RSYNC_OPTIONS} -e "${SSH} -p${PORT_BKP[$i]} ${SSH_OPTIONS}" ${files[@]} ${USER_BKP[$i]}@${HOST_BKP[$i]}:${DIR_DEST_BKP[$i]}
-    [[ $? -ne 0 ]] && log_it "send_it: Something wrong is not right, plz check ${files[@]} for ${HOST_BKP[$i]} in port ${PORT_BKP[$i]}"
+    SENDSTATUS=$(echo $?)
+    # AJUSTAR DE UM JEITO Q N ENVIA MAIL, APENAS MARCA ALERTA NO LOG E ENTÃO NO FIM DE TD ENVIA UM E-MAIL C TODOS ERROS
+    [[ ${DEBUGLEVEL} -eq 3 ]] && log_it "INFORMATION" "Send info: ssh options are ${SSH_OPTIONS} in port ${PORT_BKP[$i]} with destination ${DIR_DEST_BKP[$i]}"
+    [[ ${DEBUGLEVEL} -eq 3 ]] && log_it "INFORMATION" "Send info: files are ${files[@]} for ${HOST_BKP[$i]}"
+    [[ ${SENDSTATUS} -ne 0 ]] && mail_it "WARNING" "Something wrong is not right, plz check ${files[@]} for ${HOST_BKP[$i]} in port ${PORT_BKP[$i]}"
   done
   
 }
-
 
 
 #
@@ -164,7 +227,7 @@ function daily_it() {
   [[ ${SEND} -eq 1 ]] && send_it "${file}*"
 
   # if error, send mail
-  [[ $fsize -le $min_size ]] && mail_it "Daily"
+  [[ $fsize -le $min_size ]] && log_it "WARNING" "The tar size is below expected"
   
 }
 
@@ -176,7 +239,7 @@ function daily_it() {
 function clear_it() {
 
   # Search and remove files of daily backup
-  ${FIND} $BKPDIR -iname "*d.tar.gz" -mtime +15 -exec rm -f {} +
+  ${FIND} ${BKPDIR} -iname "*d.tar.gz" -mtime +15 -exec rm -f {} +
 
 }
 
