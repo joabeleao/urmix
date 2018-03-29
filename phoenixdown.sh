@@ -29,6 +29,9 @@ DU_OPTIONS="--max-depth=0 -c"
 # Minimum percentual for validate size of tar backup
 PERCENTUAL_MIN_SIZE="0.09"
 
+# Debug checks
+CRITICALMSG=0
+WARNINGMSG=0
 
 #
 # VERSION AND FILE CONTROL
@@ -86,63 +89,34 @@ function log_it() {
   local TYPE="$1"
   local DETAILS="$2"
 
-  case ${TYPE} in
-    "CRITICAL") 
-      printf '%s\n' "${TIMESTYLE} ${TYPE} ${DETAILS}" >> ${LOG}
-      ;;        
-    "WARNING")
-      printf '%s\n' "${TIMESTYLE} ${TYPE} ${DETAILS}" >> ${LOG}
-      ;;
-    "INFORMATION")
-      printf '%s\n' "${TIMESTYLE} ${TYPE} ${DETAILS}" >> ${LOG}
-      ;;
-  esac
-
+  printf '%s\n' "${TIMESTYLE} ${TYPE} ${DETAILS}" >> ${LOG}
 
 }
 
 
 #
-# TIMESTAMPPED MAILS
+# INFORMATION MAILS
 #
 # mail execution
 function mail_it() {
   
   # sendmail syntax: sendemail -f "SENDER" -t "RECIPIENT" -u "SUBJECT" -m "MESSAGE"  -xu "USER" -xp "PASS" -s "SMTPADDRESS:PORT" -o tls="YESorNO"
   # Defining backup type
-  local TYPE="$1"
-  local DETAILS="$2"
-  local MSG1="[${TYPE}] [$(hostname)] The backup was completed sucessfull."
-  local MSG2="[${TYPE}] [$(hostname)] Although the backup was completed sucessfull, some errors ocourred. Please check."
-  local MSG3="[${TYPE}] [$(hostname)] The backup was not completed sucessfull, please check."
+  local type="$1"
+  local details="$(grep -E "${TIMESTYLE MENOS A HORA}${type}" ${LOG})"
+  local send_mail=$(sendmail -f "${MAILFROM}" -t "${m}" -u "PHOENIXDOWN - ${type}" -m "${TIMESTYLE} ${LOGMSG} ${details}"  -xu "${MAILFROM}" -xp "${PASS}" -s "${SMTP}:587" -o tls="no")
   
   # For each mail, 
   # In order to put a timestamp in the beginning of each line on log, it was not possible to let the timestamp inside message variable
-  # First, the message is inserted on log, after, its details. Both with timestamp on the beginning. This is why 2 lines for each logs      
-  case ${TYPE} in
-    "CRITICAL") 
-      for m in ${MAILTO[@]}; do
-        sendmail -f "${MAILFROM}" -t "${m}" -u "PHOENIXDOWN - ${TYPE}" -m "${TIMESTYLE} ${MSG3} ${DETAILS}"  -xu "${MAILFROM}" -xp "${PASS}" -s "${SMTP}:587" -o tls="no"
-      done
-      printf '%s\n' "${TIMESTYLE} ${MSG3}" >> ${LOG}
-      printf '%s\n' "${TIMESTYLE} ${TYPE} ${DETAILS}" >> ${LOG}
-      ;;        
-    "WARNING")
-      for m in ${MAILTO[@]}; do
-        sendmail -f "${MAILFROM}" -t "${m}" -u "PHOENIXDOWN - ${TYPE}" -m "${TIMESTYLE} ${MSG2} ${DETAILS}"  -xu "${MAILFROM}" -xp "${PASS}" -s "${SMTP}:587" -o tls="no"
-      done
-      printf '%s\n' "${TIMESTYLE} ${MSG2}" >> ${LOG}
-      printf '%s\n' "${TIMESTYLE} ${TYPE} ${DETAILS}" >> ${LOG}
-      ;;
-    "INFORMATION")
-      for m in ${MAILTO[@]}; do
-        sendmail -f "${MAILFROM}" -t "${m}" -u "PHOENIXDOWN - ${TYPE}" -m "${TIMESTYLE} ${MSG1} ${DETAILS}"  -xu "${MAILFROM}" -xp "${PASS}" -s "${SMTP}:587" -o tls="no"
-      done
-      printf '%s\n' "${TIMESTYLE} [$MSG1]" >> ${LOG}
-      ;;
-  esac
+  # First, the message is inserted on log, after, its details. Both with timestamp on the beginning. This is why 2 lines for each logs  
+  [[ "${type}" == "INFORMATION" ]] && LOGMSG="[${TYPE}] [$(hostname)] The backup was completed sucessfull."
+  [[ "${type}" == "WARNING" ]] && LOGMSG="[${TYPE}] [$(hostname)] Although the backup was completed sucessfull, some errors ocourred. Please check."
+  [[ "${type}" == "CRITICAL" ]] && LOGMSG="[${TYPE}] [$(hostname)] The backup was not completed sucessfull, please check."
 
-}
+  for m in ${MAILTO[@]}; do ${send_mail}; done
+
+}       
+
 
 
 #
@@ -172,7 +146,6 @@ function help_it() {
 echo -e "
 Usage: $0 [OPTION]
 Example: $0 -s -d 
-
 OPTIONS:
   -d \t\t Make backup daily
   -s \t\t Send backup -Must be used before OPTIONS (-d)
@@ -190,9 +163,11 @@ function send_it() {
   for ((i=0; i<${#HOST_BKP[@]}; i++)); do
     ${RSYNC} ${RSYNC_OPTIONS} -e "${SSH} -p${PORT_BKP[$i]} ${SSH_OPTIONS}" ${files[@]} ${USER_BKP[$i]}@${HOST_BKP[$i]}:${DIR_DEST_BKP[$i]}
     SENDSTATUS=$(echo $?)
-    # AJUSTAR DE UM JEITO Q N ENVIA MAIL, APENAS MARCA ALERTA NO LOG E ENTÃO NO FIM DE TD ENVIA UM E-MAIL C TODOS ERROS
-    [[ ${DEBUGLEVEL} -eq 3 ]] && log_it "INFORMATION" "Send info: ssh options are ${SSH_OPTIONS} in port ${PORT_BKP[$i]} with destination ${DIR_DEST_BKP[$i]}"
-    [[ ${DEBUGLEVEL} -eq 3 ]] && log_it "INFORMATION" "Send info: files are ${files[@]} for ${HOST_BKP[$i]}"
+      # AJUSTAR DE UM JEITO Q N ENVIA MAIL, APENAS MARCA ALERTA NO LOG E ENTÃO NO FIM DE TD ENVIA UM E-MAIL C TODOS ERROS
+      if [[ ${DEBUGLEVEL} -eq 3 ]]; do
+        log_it "INFORMATION" "Send info: ssh options are ${SSH_OPTIONS} in port ${PORT_BKP[$i]} with destination ${DIR_DEST_BKP[$i]}"
+        log_it "INFORMATION" "Send info: files are ${files[@]} for ${HOST_BKP[$i]}"
+      done
     [[ ${SENDSTATUS} -ne 0 ]] && mail_it "WARNING" "Something wrong is not right, plz check ${files[@]} for ${HOST_BKP[$i]} in port ${PORT_BKP[$i]}"
   done
   
