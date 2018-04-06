@@ -1,7 +1,7 @@
 #!/bin/bash
-#
+# -------------------------------------------
 #  Home Sweet Home Backup
-#
+# -------------------------------------------
 #  Author: Joabe Nonis Leão - joabe.leao1 at gmail.com
 #  Based on: Willy Romao G. Franca (willyr.goncalves at gmail.com)
 #  Filename: phoenix_down.sh
@@ -10,9 +10,9 @@
 #
 
 
-#
+# -------------------------------------------
 # TOOLS SETTINGS
-#
+# -------------------------------------------
 # Tools paths for compatibility
 WHICH="/usr/bin/which"
 RSYNC="$(${WHICH} rsync)"
@@ -79,9 +79,9 @@ PASS=suasenha
 [[ -d ${BKPDIR} ]] || mkdir -p ${BKPDIR}
 
 
-#
+# -------------------------------------------
 # TIMESTAMPPED LOGS
-#
+# -------------------------------------------
 # log_it execution
 # I'll use the log example from willy's; After, a function from my tag-cli
 function log_it() {
@@ -94,9 +94,9 @@ function log_it() {
 }
 
 
-#
+# -------------------------------------------
 # INFORMATION MAILS
-#
+# -------------------------------------------
 # mail execution
 function mail_it() {
   
@@ -118,10 +118,9 @@ function mail_it() {
 }       
 
 
-
-#
+# -------------------------------------------
 # EXCLUDE THINGS
-#
+# -------------------------------------------
 # Soeckets and directory exclusion
 function exclude_it() {
 
@@ -138,9 +137,9 @@ function exclude_it() {
 }
 
 
-#
+# -------------------------------------------
 # HELP OPTION
-#
+# -------------------------------------------
 function help_it() {
 
 echo -e "
@@ -154,9 +153,9 @@ OPTIONS:
 }
 
 
-#
+# -------------------------------------------
 # SEND OPTION
-#
+# -------------------------------------------
 function send_it() {
 
   local files=("$@")
@@ -174,9 +173,9 @@ function send_it() {
 }
 
 
-#
+# -------------------------------------------
 # DAILY OPTION
-#
+# -------------------------------------------
 function daily_it() {
 
   local file="$BKPDIR/$(hostname)-$(date '+%d-%m-%Y')-d.tar.gz"
@@ -207,9 +206,9 @@ function daily_it() {
 }
 
 
-#
+# -------------------------------------------
 # BACKUP ROTATION
-#
+# -------------------------------------------
 # Clearing up backup files older then a specific time.
 function clear_it() {
 
@@ -219,9 +218,9 @@ function clear_it() {
 }
 
 
-#
+# -------------------------------------------
 # BACKUP EXECUTION
-# 
+# -------------------------------------------
 while getopts "sdchS" OPT; do
   case "$OPT" in
     "s")  SEND=1       ;;
